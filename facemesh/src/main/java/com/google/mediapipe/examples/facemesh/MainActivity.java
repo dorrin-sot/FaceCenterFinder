@@ -374,6 +374,8 @@ public class MainActivity extends AppCompatActivity {
 
     double[] normX = normalize(vBF), normY = normalize(vLR), normZ = normalize(vTB), angleZ = angle(normZ);
 
+    boolean angleIsForward = angleIsForward(angleZ);
+
     String logText = String.format("x = (%.0f, %.0f, %.0f)\n" +
                     "y = (%.0f, %.0f, %.0f)\n" +
                     "z = (%.0f, %.0f, %.0f)\n" +
@@ -382,10 +384,20 @@ public class MainActivity extends AppCompatActivity {
             normY[0], normY[1], normY[2],
             normZ[0], normZ[1], normZ[2],
             angleZ[0], angleZ[1], angleZ[2],
-            angleIsForward(angleZ) ? "FORWARD!!" : "");
+            angleIsForward ? "FORWARD!!" : "");
 
     runOnUiThread(() -> {
       resultTextView.setText(logText);
+
+//      if (angleIsForward) {
+//        Bitmap bm = result.inputBitmap();
+//        Log.i(TAG, "processFaceMesh: bitmap = " + bm);
+//        resultImageView.setImageBitmap(bm);
+//        resultTextView.setVisibility(View.GONE);
+//        resultImageView.setVisibility(View.VISIBLE);
+//        frameLayout.setVisibility(View.GONE);
+//        stopCurrentPipeline();
+//      }
     });
   }
 
@@ -404,9 +416,9 @@ public class MainActivity extends AppCompatActivity {
   }
 
   public static boolean angleIsForward(double[] vect) {
-    int error = 5;
+    double error = 3;
     return isAboutEqual(vect[0], 90, error) &&
-            isAboutEqual(vect[1], 180, error) &&
+            isAboutEqual(vect[1], 175, error) &&
             isAboutEqual(vect[2], 90, error);
   }
 
