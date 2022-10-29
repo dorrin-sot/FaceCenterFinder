@@ -15,6 +15,8 @@
 package com.google.mediapipe.examples.facemesh;
 
 import android.annotation.SuppressLint;
+import android.graphics.Bitmap;
+import android.graphics.Matrix;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -24,26 +26,27 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.exifinterface.media.ExifInterface;
 
 import com.google.mediapipe.formats.proto.LandmarkProto;
 import com.google.mediapipe.formats.proto.LandmarkProto.NormalizedLandmark;
+import com.google.mediapipe.framework.AndroidPacketGetter;
 import com.google.mediapipe.solutioncore.CameraInput;
 import com.google.mediapipe.solutioncore.SolutionGlSurfaceView;
-import com.google.mediapipe.solutions.facemesh.FaceMesh;
 import com.google.mediapipe.solutions.facemesh.FaceMeshOptions;
 import com.google.mediapipe.solutions.facemesh.FaceMeshResult;
 
+import java.util.Arrays;
 import java.util.List;
 
 /** Main activity of MediaPipe Face Mesh app. */
 public class MainActivity extends AppCompatActivity {
   private static final String TAG = "MainActivity";
 
-  private FaceMesh facemesh;
+  private CustomFaceMesh facemesh;
   // Run the pipeline and the model inference on GPU or CPU.
   private static final boolean RUN_ON_GPU = true;
 
-  private boolean cameraIsStarted = false;
   // Live camera demo UI and camera components.
   private CameraInput cameraInput;
 
@@ -53,6 +56,8 @@ public class MainActivity extends AppCompatActivity {
   private ImageView resultImageView;
   private TextView resultTextView;
 
+  private Button startCameraButton, stopCameraButton;
+
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
@@ -61,12 +66,13 @@ public class MainActivity extends AppCompatActivity {
     resultImageView = findViewById(R.id.resultImageView);
     resultTextView = findViewById(R.id.resultTextView);
     frameLayout = findViewById(R.id.preview_display_layout);
+    setCameraIsStarted(false);
   }
 
   @Override
   protected void onResume() {
     super.onResume();
-    if (cameraIsStarted) {
+    if (isCameraStarted()) {
       // Restarts the camera and the opengl surface rendering.
       cameraInput = new CameraInput(this);
       cameraInput.setNewFrameListener(textureFrame -> facemesh.send(textureFrame));
@@ -78,7 +84,7 @@ public class MainActivity extends AppCompatActivity {
   @Override
   protected void onPause() {
     super.onPause();
-    if (cameraIsStarted) {
+    if (isCameraStarted()) {
       glSurfaceView.setVisibility(View.GONE);
       cameraInput.close();
     }
@@ -86,14 +92,14 @@ public class MainActivity extends AppCompatActivity {
 
   /** Sets up the UI components for the live demo with camera input. */
   private void setupLiveDemoUiComponents() {
-    Button startCameraButton = findViewById(R.id.button_start_camera),
-            stopCameraButton = findViewById(R.id.button_stop_camera);
+    startCameraButton = findViewById(R.id.button_start_camera);
+    stopCameraButton = findViewById(R.id.button_stop_camera);
+
     startCameraButton.setOnClickListener(
         v -> {
           setupStreamingModePipeline();
 
-          startCameraButton.setVisibility(View.GONE);
-          stopCameraButton.setVisibility(View.VISIBLE);
+          setCameraIsStarted(true);
         });
     stopCameraButton.setOnClickListener(
         v -> {
@@ -106,10 +112,10 @@ public class MainActivity extends AppCompatActivity {
 
   /** Sets up core workflow for streaming mode. */
   private void setupStreamingModePipeline() {
-    this.cameraIsStarted = true;
+    setCameraIsStarted(true);
     // Initializes a new MediaPipe Face Mesh solution instance in the streaming mode.
     facemesh =
-        new FaceMesh(
+        new CustomFaceMesh(
             this,
             FaceMeshOptions.builder()
                 .setStaticImageMode(false)
@@ -119,7 +125,10 @@ public class MainActivity extends AppCompatActivity {
     facemesh.setErrorListener((message, e) -> Log.e(TAG, "MediaPipe Face Mesh error:" + message));
 
     cameraInput = new CameraInput(this);
-    cameraInput.setNewFrameListener(textureFrame -> facemesh.send(textureFrame));
+    cameraInput.setNewFrameListener(textureFrame -> {
+      facemesh.cacheImage(textureFrame);
+      facemesh.send(textureFrame);
+    });
 
     // Initializes a new Gl surface view with a user-defined FaceMeshResultGlRenderer.
     glSurfaceView =
@@ -156,6 +165,7 @@ public class MainActivity extends AppCompatActivity {
   }
 
   private void stopCurrentPipeline() {
+    setCameraIsStarted(false);
     if (cameraInput != null) {
       cameraInput.setNewFrameListener(null);
       cameraInput.close();
@@ -166,7 +176,6 @@ public class MainActivity extends AppCompatActivity {
     if (facemesh != null) {
       facemesh.close();
     }
-    cameraIsStarted = false;
   }
 
   @SuppressLint("DefaultLocale")
@@ -208,19 +217,45 @@ public class MainActivity extends AppCompatActivity {
             normZ[0], normZ[1], normZ[2],
             angleZ[0], angleZ[1], angleZ[2],
             angleIsForward ? "FORWARD!!" : "");
+    Log.i(TAG, "processFaceMesh: " + logText.replace("\n", "  "));
 
+    double[] min = new double[]{1, 1},
+            max = new double[]{-1, -1},
+            avg = new double[]{0, 0, 0};
+    if (angleIsForward) {
+      for (NormalizedLandmark landmark : landmarks) {
+        double x = landmark.getX(), y = landmark.getY(), z = landmark.getZ();
+
+        min[0] = Math.min(min[0], x); min[1] = Math.min(min[1], y);
+        max[0] = Math.max(max[0], x); max[1] = Math.max(max[1], y);
+        avg[0] += x; avg[1] += y; avg[2] += z;
+      }
+      avg[0] /= landmarks.size(); avg[1] /= landmarks.size(); avg[2] /= landmarks.size();
+    }
     runOnUiThread(() -> {
       resultTextView.setText(logText);
 
-//      if (angleIsForward) {
-//        Bitmap bm = result.inputBitmap();
-//        Log.i(TAG, "processFaceMesh: bitmap = " + bm);
-//        resultImageView.setImageBitmap(bm);
-//        resultTextView.setVisibility(View.GONE);
-//        resultImageView.setVisibility(View.VISIBLE);
-//        frameLayout.setVisibility(View.GONE);
-//        stopCurrentPipeline();
-//      }
+      if (angleIsForward) {
+        Bitmap bm = AndroidPacketGetter.getBitmapFromRgba(facemesh.cacheImagePacket);
+
+        Log.i(TAG, "processFaceMesh: cropped min=" + Arrays.toString(min) + " max=" + Arrays.toString(max));
+        double faceX = min[0] * bm.getWidth(),
+                faceY = (1 - max[1]) * bm.getHeight(),
+                faceW = (max[0] - min[0]) * bm.getWidth(),
+                faceH = (max[1] - min[1]) * bm.getHeight();
+        Bitmap croppedBm = Bitmap.createBitmap(
+                bm,
+                (int) (faceX - faceW / 4),
+                (int) (faceY - faceH / 8),
+                (int) (faceW + faceW * .5),
+                (int) (faceH + faceH * .75)
+        );
+        Log.i(TAG, "processFaceMesh: bitmap = " + croppedBm);
+
+        stopCurrentPipeline();
+        resultImageView.setImageBitmap(croppedBm);
+        resultImageView.setVisibility(View.VISIBLE);
+      }
     });
   }
 
@@ -249,4 +284,21 @@ public class MainActivity extends AppCompatActivity {
     return approx - error <= number && number <= approx + error;
   }
 
+  public boolean isCameraStarted() {
+    return stopCameraButton.getVisibility() == View.VISIBLE;
+  }
+
+  public void setCameraIsStarted(boolean cameraIsStarted) {
+    if (cameraIsStarted) {
+      startCameraButton.setVisibility(View.GONE);
+      stopCameraButton.setVisibility(View.VISIBLE);
+    } else {
+      startCameraButton.setVisibility(View.VISIBLE);
+      stopCameraButton.setVisibility(View.GONE);
+    }
+
+    frameLayout.setVisibility(stopCameraButton.getVisibility());
+    resultTextView.setVisibility(stopCameraButton.getVisibility());
+    resultImageView.setVisibility(View.GONE);
+  }
 }

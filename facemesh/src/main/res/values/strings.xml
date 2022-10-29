@@ -1,5 +1,4 @@
 <resources>
     <string name="start_camera" translatable="false">Start Camera</string>
     <string name="stop_camera" translatable="false">Stop Camera</string>
-    <string name="instruction" translatable="false">Please press any button above to start</string>
 </resources>

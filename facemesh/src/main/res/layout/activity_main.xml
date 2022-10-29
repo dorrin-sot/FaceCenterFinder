@@ -34,17 +34,13 @@
         android:id="@+id/preview_display_layout"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
-        <TextView
-            android:id="@+id/no_view"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:text="@string/instruction" />
     </FrameLayout>
     <ImageView
         android:id="@+id/resultImageView"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
         android:gravity="center"
-        android:visibility="gone"/>
+        android:visibility="gone"
+        android:scaleY="-1"
+        android:scaleType="fitCenter" />
 </LinearLayout>
