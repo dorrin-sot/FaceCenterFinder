@@ -166,6 +166,7 @@ public class MainActivity extends AppCompatActivity {
     if (facemesh != null) {
       facemesh.close();
     }
+    cameraIsStarted = false;
   }
 
   @SuppressLint("DefaultLocale")
