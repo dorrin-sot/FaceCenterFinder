@@ -43,11 +43,7 @@ public class MainActivity extends AppCompatActivity {
   // Run the pipeline and the model inference on GPU or CPU.
   private static final boolean RUN_ON_GPU = true;
 
-  private enum InputSource {
-    UNKNOWN,
-    CAMERA,
-  }
-  private InputSource inputSource = InputSource.UNKNOWN;
+  private boolean cameraIsStarted = false;
   // Live camera demo UI and camera components.
   private CameraInput cameraInput;
 
@@ -64,14 +60,13 @@ public class MainActivity extends AppCompatActivity {
     setupLiveDemoUiComponents();
     resultImageView = findViewById(R.id.resultImageView);
     resultTextView = findViewById(R.id.resultTextView);
-    resultTextView.setVisibility(View.VISIBLE);
     frameLayout = findViewById(R.id.preview_display_layout);
   }
 
   @Override
   protected void onResume() {
     super.onResume();
-    if (inputSource == InputSource.CAMERA) {
+    if (cameraIsStarted) {
       // Restarts the camera and the opengl surface rendering.
       cameraInput = new CameraInput(this);
       cameraInput.setNewFrameListener(textureFrame -> facemesh.send(textureFrame));
@@ -83,7 +78,7 @@ public class MainActivity extends AppCompatActivity {
   @Override
   protected void onPause() {
     super.onPause();
-    if (inputSource == InputSource.CAMERA) {
+    if (cameraIsStarted) {
       glSurfaceView.setVisibility(View.GONE);
       cameraInput.close();
     }
@@ -95,7 +90,7 @@ public class MainActivity extends AppCompatActivity {
             stopCameraButton = findViewById(R.id.button_stop_camera);
     startCameraButton.setOnClickListener(
         v -> {
-          setupStreamingModePipeline(InputSource.CAMERA);
+          setupStreamingModePipeline();
 
           startCameraButton.setVisibility(View.GONE);
           stopCameraButton.setVisibility(View.VISIBLE);
@@ -111,7 +106,7 @@ public class MainActivity extends AppCompatActivity {
 
   /** Sets up core workflow for streaming mode. */
   private void setupStreamingModePipeline() {
-    this.inputSource = InputSource.CAMERA;
+    this.cameraIsStarted = true;
     // Initializes a new MediaPipe Face Mesh solution instance in the streaming mode.
     facemesh =
         new FaceMesh(
@@ -123,10 +118,8 @@ public class MainActivity extends AppCompatActivity {
                 .build());
     facemesh.setErrorListener((message, e) -> Log.e(TAG, "MediaPipe Face Mesh error:" + message));
 
-    if (inputSource == InputSource.CAMERA) {
-      cameraInput = new CameraInput(this);
-      cameraInput.setNewFrameListener(textureFrame -> facemesh.send(textureFrame));
-    }
+    cameraInput = new CameraInput(this);
+    cameraInput.setNewFrameListener(textureFrame -> facemesh.send(textureFrame));
 
     // Initializes a new Gl surface view with a user-defined FaceMeshResultGlRenderer.
     glSurfaceView =
@@ -142,9 +135,7 @@ public class MainActivity extends AppCompatActivity {
 
     // The runnable to start camera after the gl surface view is attached.
     // For video input source, videoInput.start() will be called when the video uri is available.
-    if (inputSource == InputSource.CAMERA) {
-      glSurfaceView.post(this::startCamera);
-    }
+    glSurfaceView.post(this::startCamera);
 
     // Updates the preview layout.
     FrameLayout frameLayout = findViewById(R.id.preview_display_layout);
