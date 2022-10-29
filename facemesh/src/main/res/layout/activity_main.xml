@@ -24,6 +24,14 @@
             android:visibility="gone" />
     </LinearLayout>
     <TextView
+        android:id="@+id/center"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textAlignment="center"
+        android:textSize="20sp"
+        android:visibility="gone" />
+    <TextView
         android:id="@+id/resultTextView"
         android:layout_height="wrap_content"
         android:layout_width="match_parent"

@@ -16,7 +16,6 @@ package com.google.mediapipe.examples.facemesh;
 
 import android.annotation.SuppressLint;
 import android.graphics.Bitmap;
-import android.graphics.Matrix;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -56,6 +55,8 @@ public class MainActivity extends AppCompatActivity {
   private ImageView resultImageView;
   private TextView resultTextView;
 
+  private TextView center;
+
   private Button startCameraButton, stopCameraButton;
 
   @Override
@@ -66,6 +67,7 @@ public class MainActivity extends AppCompatActivity {
     resultImageView = findViewById(R.id.resultImageView);
     resultTextView = findViewById(R.id.resultTextView);
     frameLayout = findViewById(R.id.preview_display_layout);
+    center = findViewById(R.id.center);
     setCameraIsStarted(false);
   }
 
@@ -238,7 +240,7 @@ public class MainActivity extends AppCompatActivity {
       if (angleIsForward) {
         Bitmap bm = AndroidPacketGetter.getBitmapFromRgba(facemesh.cacheImagePacket);
 
-        Log.i(TAG, "processFaceMesh: cropped min=" + Arrays.toString(min) + " max=" + Arrays.toString(max));
+        Log.i(TAG, "processFaceMesh: cropped min=" + Arrays.toString(min) + " max=" + Arrays.toString(max) + " avg=" + Arrays.toString(avg));
         double faceX = min[0] * bm.getWidth(),
                 faceY = (1 - max[1]) * bm.getHeight(),
                 faceW = (max[0] - min[0]) * bm.getWidth(),
@@ -255,6 +257,13 @@ public class MainActivity extends AppCompatActivity {
         stopCurrentPipeline();
         resultImageView.setImageBitmap(croppedBm);
         resultImageView.setVisibility(View.VISIBLE);
+        center.setText(String.format(
+                "Center: (x=%d, y=%d, z=%d)",
+                ((int) (avg[0] * bm.getWidth())),
+                ((int) (avg[1] * bm.getHeight())),
+                ((int) (avg[2] * bm.getWidth()))
+        ));
+        center.setVisibility(View.VISIBLE);
       }
     });
   }
@@ -300,5 +309,6 @@ public class MainActivity extends AppCompatActivity {
     frameLayout.setVisibility(stopCameraButton.getVisibility());
     resultTextView.setVisibility(stopCameraButton.getVisibility());
     resultImageView.setVisibility(View.GONE);
+    center.setVisibility(View.GONE);
   }
 }
