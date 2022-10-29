@@ -31,7 +31,7 @@ public class FaceMeshResultGlRenderer implements ResultGlRenderer<FaceMeshResult
   private static final String TAG = "FaceMeshResultGlRenderer";
 
   private static final float[] TESSELATION_COLOR = new float[] {0.75f, 0.75f, 0.75f, 0.5f};
-  private static final int TESSELATION_THICKNESS = 5;
+  private static final int TESSELATION_THICKNESS = 2;
   private static final float[] RIGHT_EYE_COLOR = new float[] {1f, 0.2f, 0.2f, 1f};
   private static final int RIGHT_EYE_THICKNESS = 8;
   private static final float[] RIGHT_EYEBROW_COLOR = new float[] {1f, 0.2f, 0.2f, 1f};
@@ -41,9 +41,9 @@ public class FaceMeshResultGlRenderer implements ResultGlRenderer<FaceMeshResult
   private static final float[] LEFT_EYEBROW_COLOR = new float[] {0.2f, 1f, 0.2f, 1f};
   private static final int LEFT_EYEBROW_THICKNESS = 8;
   private static final float[] FACE_OVAL_COLOR = new float[] {0.9f, 0.9f, 0.9f, 1f};
-  private static final int FACE_OVAL_THICKNESS = 8;
+  private static final int FACE_OVAL_THICKNESS = 4;
   private static final float[] LIPS_COLOR = new float[] {0.9f, 0.9f, 0.9f, 1f};
-  private static final int LIPS_THICKNESS = 8;
+  private static final int LIPS_THICKNESS = 4;
   private static final String VERTEX_SHADER =
       "uniform mat4 uProjectionMatrix;\n"
           + "attribute vec4 vPosition;\n"
